@@ -63,6 +63,7 @@ int RTWUSBController::initialize8192FUCore()
     if(e){reportStartStage("fu-board",fromErrno(e));return e;}
     if(!validateFamilyRecoveryBoard()){reportStartStage("fu-family",kIOReturnNoDevice);return ENODEV;}
     reportStartStage("fu-ready");
+    return 0;
 }
 uint32_t RTWUSBController::channel8192FUModes(uint8_t channel) const
 {
