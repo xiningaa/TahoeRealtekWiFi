@@ -35,7 +35,7 @@ struct rtw_r92fu{
  struct ieee80211_hw hw;struct fu_channel channel;
  const struct rtl8xxxu_firmware_header*fw_data;int fw_size;
  unsigned rf_paths,tx_paths,rx_paths;u8 rfe_type,default_crystal_cap;bool no_pape,cck_new_agc;
- unsigned ep_tx_count,ep_tx_high_queue,ep_tx_low_queue,ep_tx_normal_queue;u8 out_ep[3],pipe_out[32];
+ unsigned ep_tx_count,ep_tx_high_queue,ep_tx_low_queue,ep_tx_normal_queue;u8 out_ep[8],pipe_out[32];
  u32 adda_backup[16],mac_backup[4],bb_backup[9],regrcr;
  u8 measured_tx[3],measured_rx[3],tx_iqk_mask,rx_iqk_mask;
  u8 cck_tx_power_index_A[6],cck_tx_power_index_B[6],ht40_1s_tx_power_index_A[5],ht40_1s_tx_power_index_B[5];
@@ -95,7 +95,7 @@ static void shutdown_result(struct rtw_r92fu*c,int result){if(result&&!c->error)
 size_t rtw_r92fu_size(void){return sizeof(struct rtw_r92fu);}
 int rtw_r92fu_init(void*memory,size_t bytes,const rtw_usb_rw_transport*bus,const rtw_waiter*wait,const rtw_r92fu_usb*usb,rtw_r92fu**out){
  if(out)*out=NULL;if(!memory||bytes<sizeof(struct rtw_r92fu)||!bus||!bus->control_in||!bus->control_out||!wait||!wait->wait_us||!usb||!out||(uintptr_t)memory%_Alignof(struct rtw_r92fu))return EINVAL;
- if(!usb->bulk_out_count||usb->bulk_out_count>3||usb->bulk_in<0x81||usb->bulk_in>0x8f||(usb->max_packet!=64&&usb->max_packet!=512))return EINVAL;
+ if(!usb->bulk_out_count||usb->bulk_out_count>8||usb->bulk_in<0x81||usb->bulk_in>0x8f||(usb->max_packet!=64&&usb->max_packet!=512))return EINVAL;
  for(unsigned i=0;i<usb->bulk_out_count;++i){if(!usb->bulk_out[i]||usb->bulk_out[i]>15)return EINVAL;for(unsigned j=0;j<i;++j)if(usb->bulk_out[j]==usb->bulk_out[i])return EINVAL;}
  struct rtw_r92fu*c=memory;memset(c,0,sizeof(*c));c->bus=*bus;c->waiter=*wait;c->usb=*usb;c->cfo_tracking.crystal_cap=255;c->rf_paths=c->rx_paths=c->tx_paths=2;c->hw.priv=c;c->hw.conf.chandef.chan=&c->channel;c->ep_tx_count=usb->bulk_out_count;c->ep_tx_high_queue=1;c->ep_tx_normal_queue=usb->bulk_out_count>=2;c->ep_tx_low_queue=usb->bulk_out_count>=3;memcpy(c->out_ep,usb->bulk_out,sizeof(c->out_ep));*out=c;return 0;
 }
