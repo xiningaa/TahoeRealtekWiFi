@@ -461,7 +461,7 @@ bool RTWUSBController::discoverUSB() {
     fact("RTWDiagUSBDiscoveryBulkOutAddresses",addresses,64);
     if(parsed!=RTW_DESC_OK)return stage("endpoint-descriptor");
     if(endpoints_.num_bulk_in!=1)return stage("bulk-in-count");
-    if(endpoints_.num_bulk_out<1||endpoints_.num_bulk_out>(family_==RTW_WIFI_RTL8814AU||family_==RTW_WIFI_RTL8723BU||is8812Family()||is88Family()?4:3))return stage("bulk-out-count");
+    if(endpoints_.num_bulk_out<1||endpoints_.num_bulk_out>(is8192FUFamily()?8:(family_==RTW_WIFI_RTL8814AU||family_==RTW_WIFI_RTL8723BU||is8812Family()||is88Family()?4:3)))return stage("bulk-out-count");
     if((family_==RTW_WIFI_RTL8814AU||is8812Family()||is88Family())&&endpoints_.num_bulk_out<2)return stage("bulk-out-minimum");
     fact("RTWDiagUSBDiscoveryFailureEndpoint",endpoints_.bulk_in[0],8);
     rxPipe_=usb_->copyPipe(endpoints_.bulk_in[0]);if(!rxPipe_)return stage("bulk-in-pipe");
