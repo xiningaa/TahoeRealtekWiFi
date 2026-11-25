@@ -10,7 +10,7 @@
 extern "C" {
 #endif
 typedef struct rtw_r92fu rtw_r92fu;
-typedef struct {uint8_t bulk_in,bulk_out[3],bulk_out_count;uint16_t max_packet;} rtw_r92fu_usb;
+typedef struct {uint8_t bulk_in,bulk_out[8],bulk_out_count;uint16_t max_packet;} rtw_r92fu_usb;
 typedef struct {
  uint8_t mac[6],rfe,crystal,thermal,channel_plan,cut,vendor,rom_revision;
  uint16_t vid,pid;uint8_t txpower[2][42];
