@@ -41,7 +41,7 @@ bool RTWUSBController::is8192FUFamily() const {return family_==RTW_WIFI_RTL8192F
 bool RTWUSBController::supports8192FUBand(bool five) const {if(five||!is8192FUFamily()||!fu_)return false;for(uint8_t ch=1;ch<=11;++ch){rtw_r92fu_operating op{ch,ch,20,0};if(rtw_r92fu_channel_supported(&fuBoard_,&op))return true;}return false;}
 int RTWUSBController::initialize8192FUCore()
 {
-    if(!is8192FUFamily()||!fuStorage_||!rxPipe_||endpoints_.num_bulk_in!=1||endpoints_.num_bulk_out<1||endpoints_.num_bulk_out>3||ioError(this))return ENXIO;
+    if(!is8192FUFamily()||!fuStorage_||!rxPipe_||endpoints_.num_bulk_in!=1||endpoints_.num_bulk_out<1||endpoints_.num_bulk_out>8||ioError(this))return ENXIO;
     auto speed=rxPipe_->getSpeed();if(speed!=kUSBHostConnectionSpeedHigh&&speed!=kUSBHostConnectionSpeedFull)return ENOTSUP;
     rtw_r92fu_usb usb{};usb.bulk_in=endpoints_.bulk_in[0];usb.bulk_out_count=endpoints_.num_bulk_out;usb.max_packet=txMPS_[0];
     if(usb.max_packet!=(speed==kUSBHostConnectionSpeedHigh?512:64))return EINVAL;
