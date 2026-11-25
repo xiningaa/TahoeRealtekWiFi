@@ -41,13 +41,28 @@ bool RTWUSBController::is8192FUFamily() const {return family_==RTW_WIFI_RTL8192F
 bool RTWUSBController::supports8192FUBand(bool five) const {if(five||!is8192FUFamily()||!fu_)return false;for(uint8_t ch=1;ch<=11;++ch){rtw_r92fu_operating op{ch,ch,20,0};if(rtw_r92fu_channel_supported(&fuBoard_,&op))return true;}return false;}
 int RTWUSBController::initialize8192FUCore()
 {
-    if(!is8192FUFamily()||!fuStorage_||!rxPipe_||endpoints_.num_bulk_in!=1||endpoints_.num_bulk_out<1||endpoints_.num_bulk_out>8||ioError(this))return ENXIO;
-    auto speed=rxPipe_->getSpeed();if(speed!=kUSBHostConnectionSpeedHigh&&speed!=kUSBHostConnectionSpeedFull)return ENOTSUP;
+    if(!is8192FUFamily()){reportStartStage("fu-family-check");return ENXIO;}
+    if(!fuStorage_||!rxPipe_){reportStartStage("fu-resources");return ENXIO;}
+    if(endpoints_.num_bulk_in!=1){reportStartStage("fu-bulk-in-count");return ENXIO;}
+    if(endpoints_.num_bulk_out<1||endpoints_.num_bulk_out>8){reportStartStage("fu-bulk-out-count");return ENXIO;}
+    if(ioError(this)){reportStartStage("fu-io-error");return ENXIO;}
+    auto speed=rxPipe_->getSpeed();setProperty("RTWDiagSpeed",(unsigned long long)speed,32);
+    if(speed!=kUSBHostConnectionSpeedHigh&&speed!=kUSBHostConnectionSpeedFull){reportStartStage("fu-speed");return ENOTSUP;}
     rtw_r92fu_usb usb{};usb.bulk_in=endpoints_.bulk_in[0];usb.bulk_out_count=endpoints_.num_bulk_out;usb.max_packet=txMPS_[0];
-    if(usb.max_packet!=(speed==kUSBHostConnectionSpeedHigh?512:64))return EINVAL;
-    for(unsigned i=0;i<usb.bulk_out_count;++i){if(!txPipes_[i]||txMPS_[i]!=usb.max_packet)return EINVAL;usb.bulk_out[i]=endpoints_.bulk_out[i];}
-    const rtw_usb_rw_transport bus{this,fuControlIn,fuControlOut};const rtw_waiter wait{this,fuWait};int e=rtw_r92fu_init(fuStorage_,fuSize_,&bus,&wait,&usb,&fu_);
-    if(!e)e=rtw_r92fu_identify(fu_);if(!e)e=rtw_r92fu_board_info(fu_,&fuBoard_);if(!e&&!validateFamilyRecoveryBoard())e=ENODEV;return e;
+    if(usb.max_packet!=(speed==kUSBHostConnectionSpeedHigh?512:64)){reportStartStage("fu-max-packet");return EINVAL;}
+    for(unsigned i=0;i<usb.bulk_out_count;++i){
+        if(!txPipes_[i]||txMPS_[i]!=usb.max_packet){reportStartStage("fu-tx-pipe");return EINVAL;}
+        usb.bulk_out[i]=endpoints_.bulk_out[i];
+    }
+    const rtw_usb_rw_transport bus{this,fuControlIn,fuControlOut};const rtw_waiter wait{this,fuWait};
+    int e=rtw_r92fu_init(fuStorage_,fuSize_,&bus,&wait,&usb,&fu_);
+    if(e){reportStartStage("fu-init",fromErrno(e));return e;}
+    e=rtw_r92fu_identify(fu_);
+    if(e){reportStartStage("fu-identify",fromErrno(e));return e;}
+    e=rtw_r92fu_board_info(fu_,&fuBoard_);
+    if(e){reportStartStage("fu-board",fromErrno(e));return e;}
+    if(!validateFamilyRecoveryBoard()){reportStartStage("fu-family",kIOReturnNoDevice);return ENODEV;}
+    reportStartStage("fu-ready");
 }
 uint32_t RTWUSBController::channel8192FUModes(uint8_t channel) const
 {
