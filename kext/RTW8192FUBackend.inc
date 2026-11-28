@@ -70,6 +70,7 @@ int RTWUSBController::initialize8192FUCore()
     setProperty("RTWDiagStage","fu-ready");
     reportStartStage("fu-ready");
     return 0;
+}
 uint32_t RTWUSBController::channel8192FUModes(uint8_t channel) const
 {
     uint32_t flags=0;rtw_r92fu_operating op{channel,channel,20,1};if(!rtw_r92fu_channel_supported(&fuBoard_,&op))return 0;flags|=IEEE80211_CHAN_HT20;
