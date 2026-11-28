@@ -52,15 +52,20 @@ int RTWUSBController::initialize8192FUCore()
     auto speed=rxPipe_->getSpeed();
     pubNum("RTWDiagSpeed",(unsigned long long)speed);
     if(speed!=kUSBHostConnectionSpeedHigh&&speed!=kUSBHostConnectionSpeedFull)return fuFail("fu-speed",ENOTSUP);
-    rtw_r92fu_usb usb{};usb.bulk_in=endpoints_.bulk_in[0];usb.bulk_out_count=endpoints_.num_bulk_out;usb.max_packet=txMPS_[0];
+    rtw_r92fu_usb usb{};
+    usb.bulk_in=endpoints_.bulk_in[0];
+    usb.bulk_out_count=endpoints_.num_bulk_out;
+    usb.max_packet=(speed==kUSBHostConnectionSpeedHigh)?512:64;
     pubNum("RTWDiagMaxPacket",(unsigned long long)usb.max_packet);
+    pubNum("RTWDiagTxMps0",(unsigned long long)txMPS_[0]);
     pubNum("RTWDiagPipes",(unsigned long long)endpoints_.num_bulk_out);
-    if(usb.max_packet!=(speed==kUSBHostConnectionSpeedHigh?512:64))return fuFail("fu-max-packet",EINVAL);
+    unsigned live=0;
     for(unsigned i=0;i<usb.bulk_out_count;++i){
-        if(!txPipes_[i])return fuFail("fu-tx-pipe-null",EINVAL);
-        if(txMPS_[i]!=usb.max_packet)return fuFail("fu-tx-pipe-mps",EINVAL);
+        if(txPipes_[i])++live;
         usb.bulk_out[i]=endpoints_.bulk_out[i];
     }
+    pubNum("RTWDiagPipesLive",(unsigned long long)live);
+    if(live!=usb.bulk_out_count)return fuFail("fu-tx-pipe-null",EINVAL);
     const rtw_usb_rw_transport bus{this,fuControlIn,fuControlOut};const rtw_waiter wait{this,fuWait};
     int e=rtw_r92fu_init(fuStorage_,fuSize_,&bus,&wait,&usb,&fu_);
     if(e)return fuFail("fu-init",e);
