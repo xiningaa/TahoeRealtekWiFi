@@ -41,18 +41,20 @@ bool RTWUSBController::is8192FUFamily() const {return family_==RTW_WIFI_RTL8192F
 bool RTWUSBController::supports8192FUBand(bool five) const {if(five||!is8192FUFamily()||!fu_)return false;for(uint8_t ch=1;ch<=11;++ch){rtw_r92fu_operating op{ch,ch,20,0};if(rtw_r92fu_channel_supported(&fuBoard_,&op))return true;}return false;}
 int RTWUSBController::initialize8192FUCore()
 {
-    const auto fuFail=[&](const char*stage,int e)->int{setProperty("RTWDiagStage",stage);setProperty("RTWDiagErrno",(unsigned long long)(uint32_t)e,32);reportStartStage(stage);return e;};
+    const auto pubNum=[&](const char*k,unsigned long long v){setProperty(k,v,32);if(auto*p=getProvider())p->setProperty(k,v,32);};
+    const auto pubStr=[&](const char*k,const char*v){setProperty(k,v);if(auto*p=getProvider())p->setProperty(k,v);};
+    const auto fuFail=[&](const char*stage,int e)->int{pubStr("RTWDiagStage",stage);pubNum("RTWDiagErrno",(unsigned long long)(uint32_t)e);reportStartStage(stage);return e;};
     if(!is8192FUFamily())return fuFail("fu-family-check",ENXIO);
     if(!fuStorage_||!rxPipe_)return fuFail("fu-resources",ENXIO);
     if(endpoints_.num_bulk_in!=1)return fuFail("fu-bulk-in-count",ENXIO);
     if(endpoints_.num_bulk_out<1||endpoints_.num_bulk_out>8)return fuFail("fu-bulk-out-count",ENXIO);
     if(ioError(this))return fuFail("fu-io-error",ENXIO);
     auto speed=rxPipe_->getSpeed();
-    setProperty("RTWDiagSpeed",(unsigned long long)speed,32);
+    pubNum("RTWDiagSpeed",(unsigned long long)speed);
     if(speed!=kUSBHostConnectionSpeedHigh&&speed!=kUSBHostConnectionSpeedFull)return fuFail("fu-speed",ENOTSUP);
     rtw_r92fu_usb usb{};usb.bulk_in=endpoints_.bulk_in[0];usb.bulk_out_count=endpoints_.num_bulk_out;usb.max_packet=txMPS_[0];
-    setProperty("RTWDiagMaxPacket",(unsigned long long)usb.max_packet,32);
-    setProperty("RTWDiagPipes",(unsigned long long)endpoints_.num_bulk_out,32);
+    pubNum("RTWDiagMaxPacket",(unsigned long long)usb.max_packet);
+    pubNum("RTWDiagPipes",(unsigned long long)endpoints_.num_bulk_out);
     if(usb.max_packet!=(speed==kUSBHostConnectionSpeedHigh?512:64))return fuFail("fu-max-packet",EINVAL);
     for(unsigned i=0;i<usb.bulk_out_count;++i){
         if(!txPipes_[i])return fuFail("fu-tx-pipe-null",EINVAL);
@@ -67,7 +69,7 @@ int RTWUSBController::initialize8192FUCore()
     e=rtw_r92fu_board_info(fu_,&fuBoard_);
     if(e)return fuFail("fu-board",e);
     if(!validateFamilyRecoveryBoard())return fuFail("fu-family",ENODEV);
-    setProperty("RTWDiagStage","fu-ready");
+    pubStr("RTWDiagStage","fu-ready");
     reportStartStage("fu-ready");
     return 0;
 }
